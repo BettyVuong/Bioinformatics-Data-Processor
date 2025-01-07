@@ -291,6 +291,121 @@ void findKNearestNeighbors(struct Animal dataZoo[NUM_SAMPLES], int newSample[NUM
   }
 }
 
+void findKNearestNeighbors(struct Animal dataZoo[NUM_SAMPLES], int newSample[NUM_FEATURES], int k, int whichDistanceFunction, int kNearestNeighbors[NUM_SAMPLES]){
+  int i = 0;
+  int j = 0;
+  int temp = 0;
+  float calcData[NUM_SAMPLES]; //dummy array used to sub and sort
+  //loading calculated data according to the distance function called
+  for (i = 0; i < NUM_SAMPLES; i++){
+    //Euclidean distance
+    if(whichDistanceFunction == 1){
+      calcData[i] = euclideanDistance(newSample, dataZoo[i].features);
+    } else if (whichDistanceFunction == 2){ //Hamming Distance
+      calcData[i] = (float)hammingDistance(newSample, dataZoo[i].features);
+    } else if (whichDistanceFunction == 3){ //Jaccard's similarity
+      calcData[i] = (float)jaccardSimilarity(newSample, dataZoo[i].features);
+    } else{ //case is out of bounds
+      printf("\nNot a valid choice");
+    }
+  }
+  //loading array with index placement
+  for(i = 0; i < NUM_SAMPLES; i++){
+    kNearestNeighbors[i] = i;
+  }
+  //sorting arrays using bubble sort
+  //OpenAI. (2024). ChatGPT (January 2022 version) [Large language model].
+  //	https://chat.openai.com/c/6f55cd94-2557-4a45-91c2-5e259915d42b
+  for( i = 0; i<NUM_SAMPLES - 1; i++){
+    for(j = 0; j < NUM_SAMPLES - 1; j++){
+      if(calcData[j] > calcData[j+1]){
+        //swaping dummy array
+        temp = calcData[j];
+        calcData[j] = calcData[j+1];
+        calcData[j+1] = temp;
+        //swapping for indices
+        temp = kNearestNeighbors[j];
+        kNearestNeighbors[j] = kNearestNeighbors[j+1];
+        kNearestNeighbors[j+1] = temp;
+      }
+    }
+  }
+  //testing purposes
+  /*
+  printf("\n Test value order:");
+  for(i = 0; i < 40; i++){
+    printf("%d ", kNearestNeighbors[i]);
+  }*/
+}
+
 //task 8
-int predictClass(struct Animal dataZoo[NUM_SAMPLES], int neighborsForNewSample[NUM_SAMPLES], int newSample[NUM_FEATURES], int k){
+int predictClass(struct Animal dataZoo[NUM_SAMPLES], int neighborsForNewSample [NUM_SAMPLES], int newSample [NUM_FEATURES], int k){
+  int kSample[k];
+  int kClassL[k];
+  int i = 0;
+  int predictClass = -1;
+  int maxCount = 0;
+  int count = 0;
+  int travInd = 0;
+  //test purposes
+  //printf("\nneigbors: ");
+  //loading for comparison
+  for(i = 0; i < k; i++){
+    kSample[i] = neighborsForNewSample[i];
+    //printf("%d ", neighborsForNewSample[i]);
+  }
+  //test purposes
+  //printf("\nClass Label: ");
+  //loading according class labels
+  for(i = 0;i < k; i++){
+    kClassL[i] = dataZoo[kSample[i]].classLabel;
+    //printf("%d ", kClassL[i]);
+  }
+  //calculating mode
+  for (i = 0; i < k; i++){
+    count = 0;
+    for(travInd = 0; travInd < k; travInd++){
+      if(kClassL[i] == kClassL[travInd]){
+        count++;
+      }
+    }
+    //comparing for a new mode
+    if(maxCount < count){
+      predictClass = kClassL[i];
+      maxCount = count;
+    }
+  }
+  return predictClass;
+}
+
+//task 9
+float findAccuracy(struct Animal dataZoo[NUM_SAMPLES], struct Animal testData[NUM_TEST_DATA], int k){
+  int i = 0;
+  float accuracy = 0;
+  int funcChoice = 1;
+  int kNearestNeighbors[NUM_SAMPLES];
+  int predictedClass[NUM_TEST_DATA];
+  int correctPredCount= 0;
+  //predicting the class of each data from testData.csv
+  for(i = 0; i < NUM_TEST_DATA; i++){
+    //calling task 7 for nearest neighbor
+    findKNearestNeighbors(dataZoo, testData[i].features, k, funcChoice, kNearestNeighbors);
+    //calling task 8 for the ML algorithm
+    predictedClass[i] = predictClass(dataZoo, kNearestNeighbors, testData[i].features, k); //storing in an array for predicted classes
+    //testing purposes
+    //printf("\npredicted #%d: %d", i, predictedClass[i]);
+  }
+  //comparing correct predictions
+  for(i = 0; i < NUM_TEST_DATA; i++){
+    if(predictedClass[i] == testData[i].classLabel){
+      correctPredCount++;
+      //printf("\nCount = %d", correctPredCount);
+    }
+  }
+  //calculating accuracy
+  accuracy = (float)correctPredCount/NUM_TEST_DATA;
+  accuracy = (accuracy*100);
+  return accuracy;
+}
+
   
